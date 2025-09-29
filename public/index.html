@@ -2,35 +2,63 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Twitch Klip İzleyici</title>
+<title>Twitch Klip Oynatıcı</title>
 <style>
-  body { margin:0; font-family:sans-serif; background:#111; color:#eee; }
-  h2 { padding:10px; }
-  .rack { display:flex; overflow-x:auto; gap:12px; padding:12px; scroll-snap-type:x mandatory; }
-  .clip { flex:0 0 360px; scroll-snap-align:center; background:#000; border-radius:8px; overflow:hidden; }
-  .clip iframe { width:100%; height:200px; border:0; }
+  body { margin:0; font-family:sans-serif; background:#111; color:#eee; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+  #player { width: 640px; height: 360px; background:#000; border-radius:8px; overflow:hidden; }
+  #controls { margin-top:10px; display:flex; justify-content:center; gap:12px; }
+  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; }
 </style>
 </head>
 <body>
-<h2>cigdemt Klipleri</h2>
-<div id="rack" class="rack"></div>
+<div id="player"></div>
+<div id="controls">
+  <button id="prev">⏮ Önceki</button>
+  <button id="next">⏭ Sonraki</button>
+</div>
 
 <script>
+let clips = [];
+let current = 0;
+
 async function loadClips() {
   const res = await fetch("/api/clips");
   const data = await res.json();
-  const rack = document.getElementById("rack");
-  const parent = window.location.hostname;
-
-  data.data.forEach(c => {
-    const div = document.createElement("div");
-    div.className = "clip";
-    div.innerHTML = `<iframe 
-      src="https://clips.twitch.tv/embed?clip=${c.id}&parent=${parent}&autoplay=false" 
-      allowfullscreen></iframe>`;
-    rack.appendChild(div);
-  });
+  clips = data.data;
+  if (clips.length > 0) showClip(current);
 }
+
+function showClip(index) {
+  const player = document.getElementById("player");
+  player.innerHTML = `
+    <iframe 
+      id="clipFrame"
+      src="https://clips.twitch.tv/embed?clip=${clips[index].id}&parent=${window.location.hostname}&autoplay=true" 
+      allowfullscreen
+      frameborder="0">
+    </iframe>
+  `;
+  // iframe yüklendiğinde dinleyici ekle
+  const iframe = document.getElementById("clipFrame");
+  // Twitch embed JS olayları için window.postMessage gerekebilir, ancak basit çözüm:
+  // Tahmini klip süresi: curation'da duration var, yoksa 20s gibi alabiliriz
+  const duration = clips[index].duration || 20;
+  clearTimeout(window.clipTimer);
+  window.clipTimer = setTimeout(() => nextClip(), duration * 1000);
+}
+
+function prevClip() {
+  current = (current - 1 + clips.length) % clips.length;
+  showClip(current);
+}
+
+function nextClip() {
+  current = (current + 1) % clips.length;
+  showClip(current);
+}
+
+document.getElementById("prev").addEventListener("click", prevClip);
+document.getElementById("next").addEventListener("click", nextClip);
 
 loadClips();
 </script>

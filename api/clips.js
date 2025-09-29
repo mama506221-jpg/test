@@ -52,6 +52,12 @@ export default async function handler(req, res) {
       }
     );
     const clipsData = await clipsResp.json();
+
+    // 🔹 İşte kritik kısım: azdan çoğa izlenme sayısına göre sıralama
+    if (clipsData.data && clipsData.data.length > 0) {
+      clipsData.data.sort((a, b) => a.view_count - b.view_count);
+    }
+
     res.status(200).json(clipsData);
   } catch (err) {
     res.status(500).json({ error: err.message });

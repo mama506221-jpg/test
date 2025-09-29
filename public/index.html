@@ -31,13 +31,11 @@
   <button id="next">⏭ Sonraki</button>
 </div>
 
-<!-- Twitch Embed JS -->
-<script src="https://player.twitch.tv/js/embed/v1.js"></script>
 <script>
 let clips = [];
 let current = 0;
-let player;
-const parentDomain = window.location.hostname; // Vercel domain veya localhost
+let iframe;
+const parentDomain = window.location.hostname; // localhost veya Vercel domain
 
 async function loadClips() {
   const res = await fetch("/api/clips");
@@ -48,23 +46,20 @@ async function loadClips() {
 
 function showClip(index) {
   const playerDiv = document.getElementById("player");
-  playerDiv.innerHTML = ""; // eski player temizle
+  playerDiv.innerHTML = ""; // önceki iframe sil
+  iframe = document.createElement("iframe");
 
-  player = new Twitch.Embed(playerDiv, {
-    width: 640,
-    height: 360,
-    clip: clips[index].id,
-    autoplay: true,
-    parent: [parentDomain]
-  });
+  iframe.src = `https://clips.twitch.tv/embed?clip=${clips[index].id}&parent=${parentDomain}&autoplay=true`;
+  iframe.width = "640";
+  iframe.height = "360";
+  iframe.frameBorder = "0";
+  iframe.allowFullscreen = true;
+  playerDiv.appendChild(iframe);
 
-  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
-    const twPlayer = player.getPlayer();
-    // eskileri kaldır
-    twPlayer.removeEventListener('ended', nextClip);
-    // bittiğinde bir sonraki klibe geç
-    twPlayer.addEventListener('ended', nextClip);
-  });
+  // Basit otomatik geçiş: klip süre bilgisinden faydalan
+  const duration = clips[index].duration || 20; // duration saniye cinsinden
+  clearTimeout(window.clipTimer);
+  window.clipTimer = setTimeout(() => nextClip(), duration * 1000);
 }
 
 function prevClip() {

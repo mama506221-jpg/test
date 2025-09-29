@@ -8,8 +8,24 @@
     margin:0; font-family:sans-serif; background:#111; color:#eee;
     display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;
   }
+  #player-container {
+    position: relative;
+    width: 640px;
+    height: 360px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
   #player {
-    width: 640px; height: 360px; background:#000; border-radius:8px; overflow:hidden;
+    width: 100%;
+    height: 100%;
+    background:#000;
+  }
+  #overlay {
+    position: absolute;
+    top:0; left:0;
+    width:100%;
+    height:100%;
+    z-index:10;
   }
   #controls {
     margin-top:10px; display:flex; justify-content:center; gap:12px;
@@ -25,17 +41,22 @@
 </head>
 <body>
 <h2>cigdemt Klip Oynatıcı</h2>
-<div id="player"></div>
+<div id="player-container">
+  <div id="player"></div>
+  <div id="overlay" tabindex="0"></div>
+</div>
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
   <button id="next">⏭ Sonraki</button>
 </div>
 
+<!-- Twitch Embed JS -->
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
 <script>
 let clips = [];
 let current = 0;
-let iframe;
-const parentDomain = window.location.hostname; // localhost veya Vercel domain
+let player;
+const parentDomain = window.location.hostname; // Vercel domain veya localhost
 
 async function loadClips() {
   const res = await fetch("/api/clips");
@@ -46,20 +67,23 @@ async function loadClips() {
 
 function showClip(index) {
   const playerDiv = document.getElementById("player");
-  playerDiv.innerHTML = ""; // önceki iframe sil
-  iframe = document.createElement("iframe");
+  playerDiv.innerHTML = ""; // eski player temizle
 
-  iframe.src = `https://clips.twitch.tv/embed?clip=${clips[index].id}&parent=${parentDomain}&autoplay=true`;
-  iframe.width = "640";
-  iframe.height = "360";
-  iframe.frameBorder = "0";
-  iframe.allowFullscreen = true;
-  playerDiv.appendChild(iframe);
+  player = new Twitch.Embed(playerDiv, {
+    width: 640,
+    height: 360,
+    clip: clips[index].id,
+    autoplay: true,
+    parent: [parentDomain]
+  });
 
-  // Basit otomatik geçiş: klip süre bilgisinden faydalan
-  const duration = clips[index].duration || 20; // duration saniye cinsinden
-  clearTimeout(window.clipTimer);
-  window.clipTimer = setTimeout(() => nextClip(), duration * 1000);
+  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
+    const twPlayer = player.getPlayer();
+    // eskileri kaldır
+    twPlayer.removeEventListener('ended', nextClip);
+    // bittiğinde bir sonraki klibe geç
+    twPlayer.addEventListener('ended', nextClip);
+  });
 }
 
 function prevClip() {
@@ -76,14 +100,18 @@ function nextClip() {
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
 
-// Klavye kısayolları
-document.addEventListener("keydown", (e) => {
-  if (e.key === "1") prevClip();
-  if (e.key === "2") nextClip();
+// Overlay üzerinden klavye kısayolları
+const overlay = document.getElementById("overlay");
+overlay.focus(); // sayfa yüklendiğinde overlay focus olsun
+overlay.addEventListener("keydown", (e) => {
+  if(e.key === "1") prevClip();
+  if(e.key === "2") nextClip();
 });
+
+// Overlay’i tıklayınca focus almasını sağla
+overlay.addEventListener("click", () => overlay.focus());
 
 loadClips();
 </script>
-
 </body>
 </html>

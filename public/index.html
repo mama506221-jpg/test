@@ -1,1 +1,80 @@
-<!DOCTYPE html> <html lang="tr"> <head> <meta charset="UTF-8"> <title>Twitch Klip Oynatıcı</title> <style> body { margin:0; font-family:sans-serif; background:#111; color:#eee; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; } #player { width: 640px; height: 360px; background:#000; border-radius:8px; overflow:hidden; } #controls { margin-top:10px; display:flex; justify-content:center; gap:12px; } button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; background:#333; color:#eee; } button:hover { background:#555; } </style> </head> <body> <h2>cigdemt Klip Oynatıcı</h2> <div id="player"></div> <div id="controls"> <button id="prev">⏮ Önceki</button> <button id="next">⏭ Sonraki</button> </div> <!-- Twitch Embed JS --> <script src="https://player.twitch.tv/js/embed/v1.js"></script> <script> let clips = []; let current = 0; let player; const parentDomain = window.location.hostname; // Vercel domain veya localhost async function loadClips() { const res = await fetch("/api/clips"); const data = await res.json(); clips = data.data; if (clips.length > 0) showClip(current); } function showClip(index) { const playerDiv = document.getElementById("player"); playerDiv.innerHTML = ""; // eski player temizle player = new Twitch.Embed(playerDiv, { width: 640, height: 360, clip: clips[index].id, autoplay: true, parent: [parentDomain] }); player.addEventListener(Twitch.Embed.VIDEO_READY, () => { const twPlayer = player.getPlayer(); // eskileri kaldır twPlayer.removeEventListener('ended', nextClip); // bittiğinde bir sonraki klibe geç twPlayer.addEventListener('ended', nextClip); }); } function prevClip() { current = (current - 1 + clips.length) % clips.length; showClip(current); } function nextClip() { current = (current + 1) % clips.length; showClip(current); } document.getElementById("prev").addEventListener("click", prevClip); document.getElementById("next").addEventListener("click", nextClip); loadClips(); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Twitch Klip Oynatıcı</title>
+<style>
+  body { margin:0; font-family:sans-serif; background:#111; color:#eee;
+         display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+  #player { width: 640px; height: 360px; background:#000; border-radius:8px; overflow:hidden; }
+  #controls { margin-top:10px; display:flex; justify-content:center; gap:12px; }
+  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; background:#333; color:#eee; }
+  button:hover { background:#555; }
+</style>
+</head>
+<body>
+<h2>cigdemt Klip Oynatıcı</h2>
+<div id="player"></div>
+<div id="controls">
+  <button id="prev">⏮ Önceki</button>
+  <button id="next">⏭ Sonraki</button>
+</div>
+
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
+<script>
+let clips = [];
+let current = 0;
+let player;
+const parentDomain = window.location.hostname.replace(/^www\./, ""); // sadece domain adı
+
+async function loadClips() {
+  try {
+    const res = await fetch("/api/clips");
+    const data = await res.json();
+    if(!data || !data.data || data.data.length === 0) {
+      console.error("Klip verisi yok:", data);
+      return;
+    }
+    clips = data.data;
+    showClip(current);
+  } catch(e) {
+    console.error("Klip yüklenirken hata:", e);
+  }
+}
+
+function showClip(index) {
+  const playerDiv = document.getElementById("player");
+  playerDiv.innerHTML = ""; // eski player temizle
+
+  player = new Twitch.Embed(playerDiv, {
+    width: 640,
+    height: 360,
+    clip: clips[index].id,
+    autoplay: true,
+    parent: [parentDomain]
+  });
+
+  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
+    const twPlayer = player.getPlayer();
+    twPlayer.removeEventListener('ended', nextClip);
+    twPlayer.addEventListener('ended', nextClip);
+  });
+}
+
+function prevClip() {
+  current = (current - 1 + clips.length) % clips.length;
+  showClip(current);
+}
+
+function nextClip() {
+  current = (current + 1) % clips.length;
+  showClip(current);
+}
+
+document.getElementById("prev").addEventListener("click", prevClip);
+document.getElementById("next").addEventListener("click", nextClip);
+
+loadClips();
+</script>
+</body>
+</html>

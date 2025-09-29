@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const broadcasterId = userData.data[0].id;
 
     const clipsResp = await fetch(
-      `https://api.twitch.tv/helix/clips?broadcaster_id=${broadcasterId}&first=20`,
+      `https://api.twitch.tv/helix/clips?broadcaster_id=${broadcasterId}&first=50`, // daha fazla klip al
       {
         headers: {
           "Client-ID": CLIENT_ID,
@@ -52,7 +52,11 @@ export default async function handler(req, res) {
       }
     );
     const clipsData = await clipsResp.json();
-    res.status(200).json(clipsData);
+
+    // view_count küçükten büyüğe sıralama
+    const sortedClips = clipsData.data.sort((a, b) => a.view_count - b.view_count);
+
+    res.status(200).json({ data: sortedClips });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

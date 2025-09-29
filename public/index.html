@@ -20,59 +20,61 @@
   <button id="next">⏭ Sonraki</button>
 </div>
 
-<script src="https://player.twitch.tv/js/embed/v1.js"></script>
 <script>
 let clips = [];
 let current = 0;
-let player;
-const parentDomain = window.location.hostname.replace(/^www\./, ""); // sadece domain adı
+let clipTimer;
+const parentDomain = window.location.hostname.replace(/^www\./, ""); // sadece domain
 
 async function loadClips() {
   try {
     const res = await fetch("/api/clips");
     const data = await res.json();
-    if(!data || !data.data || data.data.length === 0) {
-      console.error("Klip verisi yok:", data);
+    if(!data || !data.data || data.data.length===0){
+      console.error("Klip yok veya API hatası:", data);
       return;
     }
     clips = data.data;
     showClip(current);
   } catch(e) {
-    console.error("Klip yüklenirken hata:", e);
+    console.error("Klip yüklenemedi:", e);
   }
 }
 
-function showClip(index) {
+function showClip(index){
+  clearTimeout(clipTimer);
   const playerDiv = document.getElementById("player");
-  playerDiv.innerHTML = ""; // eski player temizle
+  playerDiv.innerHTML = "";
+  const clip = clips[index];
+  const iframe = document.createElement("iframe");
+  iframe.src = `https://clips.twitch.tv/embed?clip=${clip.id}&parent=${parentDomain}&autoplay=true`;
+  iframe.width = "640";
+  iframe.height = "360";
+  iframe.frameBorder = "0";
+  iframe.allowFullscreen = true;
+  playerDiv.appendChild(iframe);
 
-  player = new Twitch.Embed(playerDiv, {
-    width: 640,
-    height: 360,
-    clip: clips[index].id,
-    autoplay: true,
-    parent: [parentDomain]
-  });
-
-  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
-    const twPlayer = player.getPlayer();
-    twPlayer.removeEventListener('ended', nextClip);
-    twPlayer.addEventListener('ended', nextClip);
-  });
+  const duration = clip.duration || 20; // duration saniye
+  clipTimer = setTimeout(nextClip, duration*1000);
 }
 
-function prevClip() {
+function prevClip(){
   current = (current - 1 + clips.length) % clips.length;
   showClip(current);
 }
 
-function nextClip() {
+function nextClip(){
   current = (current + 1) % clips.length;
   showClip(current);
 }
 
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
+
+window.addEventListener("keydown", (e)=>{
+  if(e.key==="1") prevClip();
+  if(e.key==="2") nextClip();
+});
 
 loadClips();
 </script>

@@ -72,10 +72,18 @@ function nextClip() {
   showClip(current);
 }
 
+// Butonlar
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
 
+// Klavye kısayolları
+document.addEventListener("keydown", (e) => {
+  if (e.key === "1") prevClip();
+  if (e.key === "2") nextClip();
+});
+
 loadClips();
 </script>
+
 </body>
 </html>

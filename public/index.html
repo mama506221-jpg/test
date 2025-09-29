@@ -17,9 +17,12 @@
   <button id="next">⏭ Sonraki</button>
 </div>
 
+<!-- Twitch Embed JS -->
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
 <script>
 let clips = [];
 let current = 0;
+let player;
 
 async function loadClips() {
   const res = await fetch("/api/clips");
@@ -29,22 +32,25 @@ async function loadClips() {
 }
 
 function showClip(index) {
-  const player = document.getElementById("player");
-  player.innerHTML = `
-    <iframe 
-      id="clipFrame"
-      src="https://clips.twitch.tv/embed?clip=${clips[index].id}&parent=${window.location.hostname}&autoplay=true" 
-      allowfullscreen
-      frameborder="0">
-    </iframe>
-  `;
-  // iframe yüklendiğinde dinleyici ekle
-  const iframe = document.getElementById("clipFrame");
-  // Twitch embed JS olayları için window.postMessage gerekebilir, ancak basit çözüm:
-  // Tahmini klip süresi: curation'da duration var, yoksa 20s gibi alabiliriz
-  const duration = clips[index].duration || 20;
-  clearTimeout(window.clipTimer);
-  window.clipTimer = setTimeout(() => nextClip(), duration * 1000);
+  const playerDiv = document.getElementById("player");
+  playerDiv.innerHTML = ""; // eski iframe temizle
+
+  // Twitch Embed player oluştur
+  player = new Twitch.Embed(playerDiv, {
+    width: 640,
+    height: 360,
+    clip: clips[index].id,
+    autoplay: true,
+    parent: [window.location.hostname]
+  });
+
+  // Player hazır olunca event ekle
+  player.addEventListener(Twitch.Embed.VIDEO_READY, () => {
+    const twPlayer = player.getPlayer();
+    twPlayer.addEventListener('ended', () => {
+      nextClip();
+    });
+  });
 }
 
 function prevClip() {

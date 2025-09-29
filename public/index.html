@@ -48,8 +48,8 @@ function showClip(index){
   const clip = clips[index];
   const iframe = document.createElement("iframe");
   iframe.src = `https://clips.twitch.tv/embed?clip=${clip.id}&parent=${parentDomain}&autoplay=true`;
-  iframe.width = "640";
-  iframe.height = "360";
+  iframe.width = "1920";
+  iframe.height = "1080";
   iframe.frameBorder = "0";
   iframe.allowFullscreen = true;
   playerDiv.appendChild(iframe);

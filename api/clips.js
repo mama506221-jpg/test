@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const token = await getAppToken();
 
     const userResp = await fetch(
-      "https://api.twitch.tv/helix/users?login=cigdemt",
+      "https://api.twitch.tv/helix/users?login=pourselen",
       {
         headers: {
           "Client-ID": CLIENT_ID,

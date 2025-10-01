@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
     // yayıncı id al
     const userResp = await fetch(
-      "https://api.twitch.tv/helix/users?login=pourselen",
+      "https://api.twitch.tv/helix/users?login=cigdemt",
       {
         headers: {
           "Client-ID": CLIENT_ID,

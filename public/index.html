@@ -4,49 +4,51 @@
 <meta charset="UTF-8">
 <title>Twitch Klip Oynatıcı</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    background: #111;
-    color: #eee;
-    font-family: sans-serif;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  #player { flex: 1; width: 100%; height: 100%; background: #000; position: relative; }
-  #player iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-  #controls { display: flex; justify-content: center; gap: 12px; padding: 10px; background: rgba(0,0,0,0.5); }
-  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; background:#333; color:#eee; }
+  body { margin:0; background:#111; color:#eee; font-family:sans-serif; display:flex; flex-direction:column; height:100vh; }
+  #top { display:flex; gap:10px; padding:10px; background:#222; }
+  #player { flex:1; position:relative; }
+  #player iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+  #controls { display:flex; justify-content:center; gap:12px; padding:10px; background:#222; }
+  button,input { padding:8px 12px; border:none; border-radius:5px; font-size:14px; }
+  button { cursor:pointer; background:#333; color:#eee; }
   button:hover { background:#555; }
+  input { background:#000; color:#eee; border:1px solid #555; }
 </style>
 </head>
 <body>
-<h2 id="title" style="margin:0; padding:10px; text-align:center;">Klip Oynatıcı</h2>
+<div id="top">
+  <input id="username" placeholder="yayıncı adı gir (örn: pourselen)" />
+  <button id="load">Yükle</button>
+  <span id="info"></span>
+</div>
 <div id="player"></div>
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
+  <span id="progress">0/0</span>
+  <input id="jump" type="number" min="1" style="width:70px" placeholder="Atla #"/>
+  <button id="jumpBtn">Git</button>
   <button id="next">⏭ Sonraki</button>
 </div>
 
 <script>
 let clips = [];
 let current = 0;
+let total = 0;
 let clipTimer;
 const parentDomain = window.location.hostname.replace(/^www\./, "");
 
-async function loadClips() {
+async function loadClipsForUser(username) {
   try {
-    const res = await fetch("/api/clips");
+    const res = await fetch(`/api/clips?user=${username}`);
     const data = await res.json();
-    if(!data || !data.data || data.data.length===0){
-      console.error("Klip yok veya API hatası:", data);
+    if(!data || !data.clips || data.clips.length === 0){
+      alert("Klip bulunamadı");
       return;
     }
-    clips = data.data;
-    document.getElementById("title").innerText = `Toplam ${data.total} Klip - En popülerden az popülere`;
+    clips = data.clips.reverse(); // 🔹 popülerden az popülere ters çevir
+    total = clips.length;
+    current = 0;
+    document.getElementById("info").innerText = `${username} - Toplam ${total} klip`;
     showClip(current);
   } catch(e) {
     console.error("Klip yüklenemedi:", e);
@@ -63,29 +65,34 @@ function showClip(index){
   iframe.allowFullscreen = true;
   playerDiv.appendChild(iframe);
 
+  document.getElementById("progress").innerText = `${index+1}/${total}`;
+
   const duration = clip.duration || 20;
   clipTimer = setTimeout(nextClip, duration*1000);
 }
 
-function prevClip(){
-  current = (current - 1 + clips.length) % clips.length;
-  showClip(current);
-}
-
-function nextClip(){
-  current = (current + 1) % clips.length;
-  showClip(current);
+function prevClip(){ current = (current - 1 + clips.length) % clips.length; showClip(current); }
+function nextClip(){ current = (current + 1) % clips.length; showClip(current); }
+function jumpTo(){
+  const val = parseInt(document.getElementById("jump").value,10);
+  if(val>=1 && val<=total){
+    current = val-1;
+    showClip(current);
+  }
 }
 
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
+document.getElementById("jumpBtn").addEventListener("click", jumpTo);
+document.getElementById("load").addEventListener("click", ()=>{
+  const u = document.getElementById("username").value.trim();
+  if(u) loadClipsForUser(u);
+});
 
 window.addEventListener("keydown", (e)=>{
   if(e.key==="1") prevClip();
   if(e.key==="2") nextClip();
 });
-
-loadClips();
 </script>
 </body>
 </html>

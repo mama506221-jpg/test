@@ -104,13 +104,12 @@ function jumpClip(){
 }
 
 function openAllClips(){
-  if(clips.length===0) return;
-  // Tarayıcı engelini azaltmak için 200ms aralıklarla aç
-  clips.forEach((clip, i)=>{
-    setTimeout(()=>{
-      window.open(`https://clips.twitch.tv/${clip.id}`, "_blank");
-    }, i * 200);
-  });
+  if(clips.length===0) return;
+  // Kısıtlamayı göz ardı edip tüm sekmeleri anında açmaya çalışıyoruz.
+  // NOT: Tarayıcılar genellikle 1'den fazla sekmeyi engelleyecektir.
+  clips.forEach((clip)=>{
+    window.open(`https://clips.twitch.tv/${clip.id}`, "_blank");
+  });
 }
 
 document.getElementById("prev").addEventListener("click", prevClip);

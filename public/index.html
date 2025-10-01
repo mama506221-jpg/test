@@ -120,6 +120,7 @@ function jumpClip(){
 // Tüm klipleri yeni sekmede aç
 function openAllClips() {
   if(clips.length === 0) return;
+  // her klip için Twitch URL oluştur ve yeni sekmede aç
   clips.forEach(clip => {
     const url = `https://clips.twitch.tv/${clip.id}`;
     window.open(url, "_blank");

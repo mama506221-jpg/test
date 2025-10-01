@@ -26,60 +26,60 @@ async function getAppToken() {
   return cachedToken;
 }
 
-// 🔹 tüm klipleri çek (sayfalama ile)
 async function getAllClips(broadcasterId, token) {
-  let all = [];
+  let allClips = [];
   let cursor = null;
 
-  while (true) {
+  do {
     const url = new URL("https://api.twitch.tv/helix/clips");
     url.searchParams.set("broadcaster_id", broadcasterId);
     url.searchParams.set("first", "100");
     if (cursor) url.searchParams.set("after", cursor);
 
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(url, {
       headers: {
         "Client-ID": CLIENT_ID,
         "Authorization": `Bearer ${token}`
       }
     });
     const data = await resp.json();
-    if (data.data) all.push(...data.data);
+    if (data.data) {
+      allClips.push(...data.data);
+    }
+    cursor = data.pagination?.cursor || null;
+  } while (cursor);
 
-    if (data.pagination && data.pagination.cursor) {
-      cursor = data.pagination.cursor;
-    } else break;
-  }
-
-  return all;
+  // 🔹 En çok izlenenden en aza (sonra frontend ters çevirebilir)
+  allClips.sort((a, b) => b.view_count - a.view_count);
+  return allClips;
 }
 
 export default async function handler(req, res) {
   try {
+    const { user } = req.query;
+    if (!user) return res.status(400).json({ error: "username gerekli ?user=username" });
+
     const token = await getAppToken();
 
-    // yayıncı id al
-    const userResp = await fetch(
-      "https://api.twitch.tv/helix/users?login=minilow",
-      {
-        headers: {
-          "Client-ID": CLIENT_ID,
-          "Authorization": `Bearer ${token}`
-        }
+    // 1. Kullanıcı ID çek
+    const userResp = await fetch(`https://api.twitch.tv/helix/users?login=${user}`, {
+      headers: {
+        "Client-ID": CLIENT_ID,
+        "Authorization": `Bearer ${token}`
       }
-    );
+    });
     const userData = await userResp.json();
+    if (!userData.data || userData.data.length === 0) {
+      return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+    }
     const broadcasterId = userData.data[0].id;
 
-    // tüm klipler
-    const allClips = await getAllClips(broadcasterId, token);
-
-    // 🔹 Popülerden az popülere sırala
-    allClips.sort((a, b) => b.view_count - a.view_count);
+    // 2. Tüm klipleri çek
+    const clips = await getAllClips(broadcasterId, token);
 
     res.status(200).json({
-      total: allClips.length,
-      data: allClips
+      total: clips.length,
+      clips
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

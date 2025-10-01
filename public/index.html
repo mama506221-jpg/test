@@ -24,8 +24,6 @@
   #controls {
     display:flex; justify-content:center; gap:12px; padding:10px; background:#222;
   }
-  #status { color:#ccc; line-height:28px; }
-  #clipCount { margin-left:10px; }
 </style>
 </head>
 <body>
@@ -63,30 +61,24 @@ async function loadClips() {
   if (start) url += `&start=${new Date(start).toISOString()}`;
   if (end) url += `&end=${new Date(end).toISOString()}`;
 
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if(!data || !data.data || data.data.length === 0) {
-      alert("Klip bulunamadı!");
-      return;
-    }
-    clips = data.data;
-    current = 0;
-    document.getElementById("clipCount").innerText = `Toplam: ${data.total} klip`;
-    showClip(current);
-  } catch(e) {
-    console.error("Klip yüklenemedi:", e);
-    alert("Klipler yüklenirken hata oluştu.");
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data || !data.data || data.data.length === 0) {
+    alert("Klip bulunamadı!");
+    return;
   }
+  clips = data.data;
+  current = 0;
+  document.getElementById("clipCount").innerText = `Toplam: ${data.total} klip`;
+  showClip(current);
 }
 
-// Klip göster
+// Mevcut klibi göster
 function showClip(index) {
   const playerDiv = document.getElementById("player");
   playerDiv.innerHTML = "";
   const clip = clips[index];
   if (!clip) return;
-
   const iframe = document.createElement("iframe");
   iframe.src = `https://clips.twitch.tv/embed?clip=${clip.id}&parent=${parentDomain}&autoplay=true`;
   iframe.allowFullscreen = true;
@@ -95,52 +87,51 @@ function showClip(index) {
   document.getElementById("status").innerText = `${index+1}/${clips.length}`;
 }
 
-// Önceki klip
+// Önceki/sonraki klip
 function prevClip(){
-  if(clips.length === 0) return;
+  if(clips.length===0) return;
   current = (current - 1 + clips.length) % clips.length;
   showClip(current);
 }
 
-// Sonraki klip
 function nextClip(){
-  if(clips.length === 0) return;
+  if(clips.length===0) return;
   current = (current + 1) % clips.length;
   showClip(current);
 }
 
-// Belirli klibe atla
+// Jump input
 function jumpClip(){
   const val = parseInt(document.getElementById("jumpInput").value);
   if(!val || val < 1 || val > clips.length) return;
-  current = val - 1;
+  current = val-1;
   showClip(current);
 }
 
 // Tüm klipleri yeni sekmede aç
 function openAllClips() {
   if(clips.length === 0) return;
-  // her klip için Twitch URL oluştur ve yeni sekmede aç
-  clips.forEach(clip => {
-    const url = `https://clips.twitch.tv/${clip.id}`;
-    window.open(url, "_blank");
+  clips.forEach((clip, i) => {
+    setTimeout(() => {
+      const url = `https://clips.twitch.tv/${clip.id}`;
+      window.open(url, "_blank");
+    }, i * 100); // 100ms aralık ile aç, pop-up engellemeyi azaltır
   });
 }
 
-// Event listenerlar
+// Event listenerler
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
 document.getElementById("jumpBtn").addEventListener("click", jumpClip);
 document.getElementById("loadBtn").addEventListener("click", loadClips);
 document.getElementById("openAllBtn").addEventListener("click", openAllClips);
 
-// Klavye kısayolları (tam ekranda da çalışır)
 window.addEventListener("keydown", (e)=>{
   if(e.key==="1") prevClip();
   if(e.key==="2") nextClip();
 });
 
-// Sayfa yüklendiğinde varsayılan klipleri getir
+// Sayfa yüklendiğinde default klipleri getir
 loadClips();
 </script>
 </body>

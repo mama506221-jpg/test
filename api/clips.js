@@ -27,61 +27,55 @@ async function getAppToken() {
 }
 
 async function getAllClips(broadcasterId, token) {
-  let allClips = [];
+  let all = [];
   let cursor = null;
-
   do {
     const url = new URL("https://api.twitch.tv/helix/clips");
     url.searchParams.set("broadcaster_id", broadcasterId);
     url.searchParams.set("first", "100");
     if (cursor) url.searchParams.set("after", cursor);
 
-    const resp = await fetch(url, {
+    const resp = await fetch(url.toString(), {
       headers: {
         "Client-ID": CLIENT_ID,
         "Authorization": `Bearer ${token}`
       }
     });
-    const data = await resp.json();
-    if (data.data) {
-      allClips.push(...data.data);
-    }
-    cursor = data.pagination?.cursor || null;
+    const page = await resp.json();
+    if (page.data && page.data.length) all.push(...page.data);
+    cursor = page.pagination?.cursor || null;
   } while (cursor);
 
-  // 🔹 En çok izlenenden en aza (sonra frontend ters çevirebilir)
-  allClips.sort((a, b) => b.view_count - a.view_count);
-  return allClips;
+  // numerik güvenli sıralama: en popüler (yüksek view_count) -> en az popüler
+  all.sort((a, b) => (Number(b.view_count) || 0) - (Number(a.view_count) || 0));
+
+  return all;
 }
 
 export default async function handler(req, res) {
   try {
-    const { user } = req.query;
-    if (!user) return res.status(400).json({ error: "username gerekli ?user=username" });
+    const username = (req.query.user || req.query.username || "pourselen").trim();
+    if (!username) return res.status(400).json({ error: "user query param gerekli: ?user=USERNAME" });
 
     const token = await getAppToken();
 
-    // 1. Kullanıcı ID çek
-    const userResp = await fetch(`https://api.twitch.tv/helix/users?login=${user}`, {
-      headers: {
-        "Client-ID": CLIENT_ID,
-        "Authorization": `Bearer ${token}`
-      }
+    const userResp = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+      headers: { "Client-ID": CLIENT_ID, "Authorization": `Bearer ${token}` }
     });
-    const userData = await userResp.json();
-    if (!userData.data || userData.data.length === 0) {
-      return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+    const userJson = await userResp.json();
+    if (!userJson.data || userJson.data.length === 0) {
+      return res.status(404).json({ error: "kullanıcı bulunamadı" });
     }
-    const broadcasterId = userData.data[0].id;
+    const broadcasterId = userJson.data[0].id;
 
-    // 2. Tüm klipleri çek
-    const clips = await getAllClips(broadcasterId, token);
+    const allClips = await getAllClips(broadcasterId, token);
 
     res.status(200).json({
-      total: clips.length,
-      clips
+      total: allClips.length,
+      clips: allClips
     });
   } catch (err) {
+    console.error("API error:", err);
     res.status(500).json({ error: err.message });
   }
 }

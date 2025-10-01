@@ -16,49 +16,15 @@
     display: flex;
     flex-direction: column;
   }
-
-  #player {
-    flex: 1;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    position: relative;
-  }
-
-  #player iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
-
-  #controls {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    padding: 10px;
-    background: rgba(0,0,0,0.5);
-  }
-
-  button {
-    padding:10px 20px;
-    font-size:16px;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
-    background:#333;
-    color:#eee;
-  }
-
-  button:hover {
-    background:#555;
-  }
+  #player { flex: 1; width: 100%; height: 100%; background: #000; position: relative; }
+  #player iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+  #controls { display: flex; justify-content: center; gap: 12px; padding: 10px; background: rgba(0,0,0,0.5); }
+  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; background:#333; color:#eee; }
+  button:hover { background:#555; }
 </style>
 </head>
 <body>
-<h2 style="margin:0; padding:10px; text-align:center;">cigdemt Klip Oynatıcı</h2>
+<h2 id="title" style="margin:0; padding:10px; text-align:center;">Klip Oynatıcı</h2>
 <div id="player"></div>
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
@@ -69,7 +35,7 @@
 let clips = [];
 let current = 0;
 let clipTimer;
-const parentDomain = window.location.hostname.replace(/^www\./, ""); // sadece domain
+const parentDomain = window.location.hostname.replace(/^www\./, "");
 
 async function loadClips() {
   try {
@@ -80,6 +46,7 @@ async function loadClips() {
       return;
     }
     clips = data.data;
+    document.getElementById("title").innerText = `Toplam ${data.total} Klip - En popülerden az popülere`;
     showClip(current);
   } catch(e) {
     console.error("Klip yüklenemedi:", e);
@@ -96,7 +63,7 @@ function showClip(index){
   iframe.allowFullscreen = true;
   playerDiv.appendChild(iframe);
 
-  const duration = clip.duration || 20; // duration saniye
+  const duration = clip.duration || 20;
   clipTimer = setTimeout(nextClip, duration*1000);
 }
 

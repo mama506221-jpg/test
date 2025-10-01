@@ -17,10 +17,40 @@
   }
   button { background:#333; color:#eee; cursor:pointer; }
   button:hover { background:#555; }
-  #player { flex:1; position:relative; background:#000; }
+  
+  /* Ana içerik flex yapısı */
+  #mainContent {
+    flex:1;
+    display:flex;
+    overflow:hidden;
+  }
+
+  #player {
+    flex:2;
+    position:relative;
+    background:#000;
+  }
   #player iframe {
     position:absolute; top:0; left:0; width:100%; height:100%; border:0;
   }
+
+  #clipList {
+    flex:1;
+    background:#222;
+    overflow-y:auto;
+    padding:10px;
+    color:#0ff;
+  }
+  #clipList a {
+    display:block;
+    color:#0ff;
+    margin-bottom:5px;
+    text-decoration:none;
+  }
+  #clipList a:hover {
+    text-decoration:underline;
+  }
+
   #controls {
     display:flex; justify-content:center; gap:12px; padding:10px; background:#222;
   }
@@ -33,10 +63,12 @@
   Bitiş: <input id="endDate" type="date">
   <button id="loadBtn">Getir</button>
   <span id="clipCount"></span>
-  <button id="openAllBtn">🔗 Hepsini Yeni Sekmede Aç</button>
 </header>
 
-<div id="player"></div>
+<div id="mainContent">
+  <div id="player"></div>
+  <div id="clipList"></div>
+</div>
 
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
@@ -51,6 +83,7 @@ let clips = [];
 let current = 0;
 const parentDomain = window.location.hostname.replace(/^www\./, "");
 
+// Klipleri yükleme ve listeleme
 async function loadClips() {
   const broadcaster = document.getElementById("broadcasterInput").value;
   const start = document.getElementById("startDate").value;
@@ -66,12 +99,15 @@ async function loadClips() {
     alert("Klip bulunamadı!");
     return;
   }
+
   clips = data.data;
   current = 0;
   document.getElementById("clipCount").innerText = `Toplam: ${data.total} klip`;
   showClip(current);
+  listClips();
 }
 
+// Oynatıcıda klibi göster
 function showClip(index) {
   const playerDiv = document.getElementById("player");
   playerDiv.innerHTML = "";
@@ -84,6 +120,20 @@ function showClip(index) {
   document.getElementById("status").innerText = `${index+1}/${clips.length}`;
 }
 
+// Sağda listeleme
+function listClips() {
+  const listDiv = document.getElementById("clipList");
+  listDiv.innerHTML = "";
+  clips.forEach((clip, index) => {
+    const a = document.createElement("a");
+    a.href = `https://clips.twitch.tv/${clip.id}`;
+    a.target = "_blank";
+    a.innerText = `${index+1}. ${clip.title || clip.id}`;
+    listDiv.appendChild(a);
+  });
+}
+
+// Kontroller
 function prevClip(){
   if(clips.length===0) return;
   current = (current - 1 + clips.length) % clips.length;
@@ -103,20 +153,11 @@ function jumpClip(){
   showClip(current);
 }
 
-function openAllClips(){
-  if(clips.length===0) return;
-  // Kısıtlamayı göz ardı edip tüm sekmeleri anında açmaya çalışıyoruz.
-  // NOT: Tarayıcılar genellikle 1'den fazla sekmeyi engelleyecektir.
-  clips.forEach((clip)=>{
-    window.open(`https://clips.twitch.tv/${clip.id}`, "_blank");
-  });
-}
-
+// Eventler
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
 document.getElementById("jumpBtn").addEventListener("click", jumpClip);
 document.getElementById("loadBtn").addEventListener("click", loadClips);
-document.getElementById("openAllBtn").addEventListener("click", openAllClips);
 
 window.addEventListener("keydown", (e)=>{
   if(e.key==="1") prevClip();

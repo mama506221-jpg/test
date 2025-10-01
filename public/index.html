@@ -4,116 +4,130 @@
 <meta charset="UTF-8">
 <title>Twitch Klip Oynatıcı</title>
 <style>
-  body {
-    margin:0; padding:0; background:#111; color:#eee; font-family:sans-serif;
-    display:flex; flex-direction:column; height:100vh;
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background: #111;
+    color: #eee;
+    font-family: sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
-  header {
-    background:#222; padding:10px; display:flex; gap:10px; align-items:center;
-    justify-content:center; flex-wrap:wrap;
+
+  #player {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    position: relative;
   }
-  input, button {
-    padding:6px 10px; border:none; border-radius:5px; font-size:14px;
-  }
-  button { background:#333; color:#eee; cursor:pointer; }
-  button:hover { background:#555; }
-  #player { flex:1; position:relative; background:#000; }
+
   #player iframe {
-    position:absolute; top:0; left:0; width:100%; height:100%; border:0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
   }
+
   #controls {
-    display:flex; justify-content:center; gap:12px; padding:10px; background:#222;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+  }
+
+  button {
+    padding:10px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    background:#333;
+    color:#eee;
+  }
+
+  button:hover {
+    background:#555;
   }
 </style>
 </head>
 <body>
-<header>
-  Yayıncı: <input id="broadcasterInput" type="text" value="pourselen">
-  Başlangıç: <input id="startDate" type="date">
-  Bitiş: <input id="endDate" type="date">
-  <button id="loadBtn">Getir</button>
-  <span id="clipCount"></span>
-</header>
-
+<h2 style="margin:0; padding:10px; text-align:center;">Twitch Klip Oynatıcı</h2>
 <div id="player"></div>
-
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
-  <span id="status"></span>
-  <input id="jumpInput" type="number" min="1" style="width:60px;">
-  <button id="jumpBtn">Git</button>
   <button id="next">⏭ Sonraki</button>
+  <button id="fullscreen">⛶ Tam Ekran</button>
 </div>
 
 <script>
 let clips = [];
 let current = 0;
-const parentDomain = window.location.hostname.replace(/^www\./, "");
+const parentDomain = window.location.hostname.replace(/^www\./, ""); // sadece domain
 
 async function loadClips() {
-  const broadcaster = document.getElementById("broadcasterInput").value;
-  const start = document.getElementById("startDate").value;
-  const end = document.getElementById("endDate").value;
-
-  let url = `/api/clips?broadcaster=${broadcaster}`;
-  if (start) url += `&start=${new Date(start).toISOString()}`;
-  if (end) url += `&end=${new Date(end).toISOString()}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!data || !data.data) {
-    alert("Klip bulunamadı!");
-    return;
+  try {
+    const res = await fetch("/api/clips");
+    const data = await res.json();
+    if(!data || !data.data || data.data.length===0){
+      console.error("Klip yok veya API hatası:", data);
+      return;
+    }
+    clips = data.data;
+    showClip(current);
+  } catch(e) {
+    console.error("Klip yüklenemedi:", e);
   }
-  clips = data.data;
-  current = 0;
-  document.getElementById("clipCount").innerText = `Toplam: ${data.total} klip`;
-  showClip(current);
 }
 
-function showClip(index) {
+function showClip(index){
   const playerDiv = document.getElementById("player");
   playerDiv.innerHTML = "";
   const clip = clips[index];
-  if (!clip) return;
   const iframe = document.createElement("iframe");
   iframe.src = `https://clips.twitch.tv/embed?clip=${clip.id}&parent=${parentDomain}&autoplay=true`;
   iframe.allowFullscreen = true;
   playerDiv.appendChild(iframe);
-
-  document.getElementById("status").innerText = `${index+1}/${clips.length}`;
 }
 
 function prevClip(){
-  if(clips.length===0) return;
   current = (current - 1 + clips.length) % clips.length;
   showClip(current);
 }
 
 function nextClip(){
-  if(clips.length===0) return;
   current = (current + 1) % clips.length;
   showClip(current);
 }
 
-function jumpClip(){
-  const val = parseInt(document.getElementById("jumpInput").value);
-  if(!val || val < 1 || val > clips.length) return;
-  current = val-1;
-  showClip(current);
-}
-
+// Butonlar
 document.getElementById("prev").addEventListener("click", prevClip);
 document.getElementById("next").addEventListener("click", nextClip);
-document.getElementById("jumpBtn").addEventListener("click", jumpClip);
-document.getElementById("loadBtn").addEventListener("click", loadClips);
+document.getElementById("fullscreen").addEventListener("click", toggleFullscreen);
 
+// Klavye kısayolları
 window.addEventListener("keydown", (e)=>{
-  if(e.key==="1") prevClip();
-  if(e.key==="2") nextClip();
+  if(e.key === "1") prevClip();
+  if(e.key === "2") nextClip();
+  if(e.key.toLowerCase() === "f") toggleFullscreen();
 });
 
-loadClips(); // default ilk yükleme
+// Tam ekran aç/kapat
+function toggleFullscreen(){
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+loadClips();
 </script>
 </body>
 </html>

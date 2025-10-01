@@ -5,27 +5,30 @@
 <title>Twitch Klip Oynatıcı</title>
 <style>
   body { margin:0; background:#111; color:#eee; font-family:sans-serif; display:flex; flex-direction:column; height:100vh; }
-  #top { display:flex; gap:10px; padding:10px; background:#222; }
-  #player { flex:1; position:relative; }
+  #top { display:flex; gap:10px; padding:10px; background:#222; align-items:center; }
+  #player { flex:1; position:relative; background:#000; }
   #player iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
-  #controls { display:flex; justify-content:center; gap:12px; padding:10px; background:#222; }
-  button,input { padding:8px 12px; border:none; border-radius:5px; font-size:14px; }
+  #controls { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px; background:#222; }
+  button, input { padding:8px 12px; border-radius:6px; border:none; font-size:14px; }
   button { cursor:pointer; background:#333; color:#eee; }
   button:hover { background:#555; }
-  input { background:#000; color:#eee; border:1px solid #555; }
+  input { background:#000; color:#eee; border:1px solid #444; }
+  #info { margin-left:8px; color:#ccc; }
 </style>
 </head>
 <body>
 <div id="top">
-  <input id="username" placeholder="yayıncı adı gir (örn: pourselen)" />
+  <input id="username" placeholder="yayıncı (örn: pourselen)" />
   <button id="load">Yükle</button>
-  <span id="info"></span>
+  <span id="info">Hazır</span>
 </div>
+
 <div id="player"></div>
+
 <div id="controls">
   <button id="prev">⏮ Önceki</button>
   <span id="progress">0/0</span>
-  <input id="jump" type="number" min="1" style="width:70px" placeholder="Atla #"/>
+  <input id="jump" type="number" min="1" style="width:80px" placeholder="Atla #" />
   <button id="jumpBtn">Git</button>
   <button id="next">⏭ Sonraki</button>
 </div>
@@ -39,23 +42,25 @@ const parentDomain = window.location.hostname.replace(/^www\./, "");
 
 async function loadClipsForUser(username) {
   try {
-    const res = await fetch(`/api/clips?user=${username}`);
+    const res = await fetch(`/api/clips?user=${encodeURIComponent(username)}`);
     const data = await res.json();
-    if(!data || !data.clips || data.clips.length === 0){
-      alert("Klip bulunamadı");
+    if (!data || !data.clips || data.clips.length === 0) {
+      alert("Bu kullanıcı için klip bulunamadı veya API hatası.");
       return;
     }
-    clips = data.clips.reverse(); // 🔹 popülerden az popülere ters çevir
-    total = clips.length;
+    // ÖNEMLİ: backend zaten en popüler -> en az popüler biçiminde döndürüyor
+    clips = data.clips; 
+    total = data.total || clips.length;
     current = 0;
-    document.getElementById("info").innerText = `${username} - Toplam ${total} klip`;
+    document.getElementById("info").innerText = `${username} — Toplam ${total} klip (popüler→az)`;
     showClip(current);
-  } catch(e) {
-    console.error("Klip yüklenemedi:", e);
+  } catch (err) {
+    console.error(err);
+    alert("Klip yüklenirken hata. Console'a bak.");
   }
 }
 
-function showClip(index){
+function showClip(index) {
   clearTimeout(clipTimer);
   const playerDiv = document.getElementById("player");
   playerDiv.innerHTML = "";
@@ -67,16 +72,26 @@ function showClip(index){
 
   document.getElementById("progress").innerText = `${index+1}/${total}`;
 
-  const duration = clip.duration || 20;
-  clipTimer = setTimeout(nextClip, duration*1000);
+  const duration = Number(clip.duration) || 20;
+  clipTimer = setTimeout(() => nextClip(), duration * 1000);
 }
 
-function prevClip(){ current = (current - 1 + clips.length) % clips.length; showClip(current); }
-function nextClip(){ current = (current + 1) % clips.length; showClip(current); }
-function jumpTo(){
-  const val = parseInt(document.getElementById("jump").value,10);
-  if(val>=1 && val<=total){
-    current = val-1;
+function prevClip() {
+  if (!clips.length) return;
+  current = (current - 1 + clips.length) % clips.length;
+  showClip(current);
+}
+
+function nextClip() {
+  if (!clips.length) return;
+  current = (current + 1) % clips.length;
+  showClip(current);
+}
+
+function jumpTo() {
+  const v = parseInt(document.getElementById("jump").value, 10);
+  if (!isNaN(v) && v >= 1 && v <= total) {
+    current = v - 1;
     showClip(current);
   }
 }
@@ -86,13 +101,18 @@ document.getElementById("next").addEventListener("click", nextClip);
 document.getElementById("jumpBtn").addEventListener("click", jumpTo);
 document.getElementById("load").addEventListener("click", ()=>{
   const u = document.getElementById("username").value.trim();
-  if(u) loadClipsForUser(u);
+  if (u) loadClipsForUser(u);
 });
 
-window.addEventListener("keydown", (e)=>{
-  if(e.key==="1") prevClip();
-  if(e.key==="2") nextClip();
+// klavye kısayolları
+window.addEventListener("keydown", (e) => {
+  if (e.key === "1") prevClip();
+  if (e.key === "2") nextClip();
 });
+
+// default yükle (opsiyonel)
+document.getElementById("username").value = "pourselen";
+loadClipsForUser("pourselen");
 </script>
 </body>
 </html>
